@@ -5,6 +5,7 @@ import glsl from 'vite-plugin-glsl'
 
 export default {
     root: 'src/',
+    base: '/Dredge/',
     publicDir: '../public/',
     plugins:
     [
