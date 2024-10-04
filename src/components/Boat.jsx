@@ -37,7 +37,7 @@ export function BoatModel(props) {
   })
 
 
-  const { nodes, materials } = useGLTF('/dredge_fan_art.glb')
+  const { nodes, materials } = useGLTF('/Dredge/dredge_fan_art.glb')
   return (
     <group {...props} dispose={null} ref={body} position={[0,-0.07,-2]} scale={0.2}>
       <group scale={0.1}>
@@ -319,4 +319,4 @@ export function BoatModel(props) {
   )
 }
 
-useGLTF.preload('/dredge_fan_art.glb')
+useGLTF.preload('/Dredge/dredge_fan_art.glb')

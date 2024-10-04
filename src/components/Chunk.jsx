@@ -3,7 +3,7 @@ import terrainFragmentShader from '../shaders/test/fragment.glsl'
 import * as THREE from 'three'
 import CustomShaderMaterial from 'three-custom-shader-material/vanilla'
 import CMS from 'three-custom-shader-material'
-console.log(terrainVertexShader, terrainFragmentShader)
+
 import { useEffect, useMemo, useRef } from 'react'
 import { useControls } from 'leva'
 
