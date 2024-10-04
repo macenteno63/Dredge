@@ -25,19 +25,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          version: 9
+          run_install: false
+          
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: 22.x  # Use the latest stable version of Node.js
           cache: 'pnpm'
-
-      - name: Install pnpm
-        run: |
-          npm install -g pnpm  # Install pnpm globally
-          pnpm config set store-dir ~/.pnpm-store  # Set the pnpm store directory
-        # Make sure pnpm is available in the path
-        env:
-          PATH: ~/.npm-global/bin:${{ env.PATH }}
 
       - name: Install dependencies
         run: pnpm install
