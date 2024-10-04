@@ -22,6 +22,8 @@ export function BoatModel(props) {
     // Calculer la direction actuelle du bateau
     const direction = new THREE.Vector3(0, 0, 1)
     direction.applyQuaternion(bodyCurrent.quaternion)
+    //transforme le vecteur direcection sur l'axe x et z a 90 degres vers la gauche
+    direction.applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2)
     if (forward) {
       bodyCurrent.position.addScaledVector(direction, 0.01)
     }
