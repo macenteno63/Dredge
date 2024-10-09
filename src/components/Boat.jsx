@@ -6,319 +6,1145 @@ Source: https://sketchfab.com/3d-models/dredge-fan-art-ca7b46380dce4d699834f675d
 Title: Dredge Fan Art
 */
 
-import React, { useRef } from 'react'
-import { useGLTF, useKeyboardControls } from '@react-three/drei'
+import React, { useRef, useState,useEffect } from 'react'
+import { useGLTF, useKeyboardControls,CameraControls } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
+import { lerp } from 'three/src/math/MathUtils.js'
+    // Fonction pour évaluer une courbe de Bézier cubique
 
 export function BoatModel(props) {
+  const elice1 = useRef()
+  const elice2 = useRef()
   const body = useRef()
+  const boatRotation = useRef()
+  const camera = useRef()
   const [ subscribeKeys, getKeys ] = useKeyboardControls()
-  useFrame(() => {
+  const [isChanging, setIsChanging] = useState(false)
+
+  const [ smoothedCameraPosition ] = useState(() => new THREE.Vector3(0,100,0))
+  const [ smoothedCameraTarget ] = useState(() => new THREE.Vector3())
+
+  // Paramètres d'accélération et de vitesse maximale
+  const maxSpeed = 0.7; // Vitesse maximale
+  const maxSpeedBackward = 0.3; // Vitesse maximale en marche arrière
+  const accelerationRate = 0.01; // Taux d'accélération
+  const decelerationRate = 0.05; // Taux de décélération
+  const [currentSpeed, setCurrentSpeed] = useState(0)
+
+  useFrame((state, delta) => {
     const { forward, backward, leftward, rightward } = getKeys()
-    const bodyCurrent = body.current
-  
-    // Calculer la direction actuelle du bateau
-    // Calculer la direction actuelle du bateau
     const direction = new THREE.Vector3(0, 0, 1)
-    direction.applyQuaternion(bodyCurrent.quaternion)
-    //transforme le vecteur direcection sur l'axe x et z a 90 degres vers la gauche
+    direction.applyQuaternion(body.current.quaternion)
     direction.applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2)
+
+    // Si on avance, on augmente progressivement la vitesse
     if (forward) {
-      bodyCurrent.position.addScaledVector(direction, 0.01)
+      const newSpeed = lerp(currentSpeed, maxSpeed, accelerationRate)
+      setCurrentSpeed(newSpeed)
+      elice1.current.rotation.x += 15 * delta
+      elice2.current.rotation.x += 15 * delta
+      boatRotation.current.rotation.x += Math.sin(state.clock.elapsedTime) * 0.1 * delta
+    } 
+    else if(backward) {
+      const newSpeed = lerp(currentSpeed, -maxSpeedBackward, accelerationRate)
+      setCurrentSpeed(newSpeed)
+      elice1.current.rotation.x -= 5 * delta
+      elice2.current.rotation.x -= 5 * delta
     }
-    if (backward) {
-      bodyCurrent.position.addScaledVector(direction, -0.01)
+    // Si aucune touche n'est appuyée, on ralentit progressivement
+    else {
+      const newSpeed = lerp(currentSpeed, 0, decelerationRate)
+      setCurrentSpeed(newSpeed)
+        // rotation au point initial si on avance pas
+      boatRotation.current.rotation.x = lerp(boatRotation.current.rotation.x, 0, 0.01)
     }
+    direction.y = 0
+    // Déplacer le bateau en fonction de la vitesse et de la direction
+    body.current.position.addScaledVector(direction, currentSpeed * delta)
+
+    // Rotation gauche/droite
     if (leftward) {
-      bodyCurrent.rotation.y += 0.01
+      body.current.rotation.y += 1 * delta
     }
     if (rightward) {
-      bodyCurrent.rotation.y -= 0.01
+      body.current.rotation.y -= 1 * delta
     }
+
+    // roulis du bateau
+    // body.current.rotation
+
+
+
+    //Camera
+    if (isChanging) return
+    const bodyPosition = body.current.position
+    const cameraOffset = new THREE.Vector3(0, 0.4, -1) // Adjust the offset as needed
+    cameraOffset.applyQuaternion(body.current.quaternion)
+    cameraOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2)
+    const cameraPosition = bodyPosition.clone().add(cameraOffset)
+    const cameraTarget = new THREE.Vector3()
+    cameraTarget.copy(bodyPosition)
+    cameraTarget.y += 0.25
+    smoothedCameraPosition.lerp(cameraPosition, 5*delta)
+    smoothedCameraTarget.lerp(cameraTarget, 5*delta)
+    // Updated camera control with axis limitation
+    camera.current.setLookAt(
+      smoothedCameraPosition.x, smoothedCameraPosition.y, smoothedCameraPosition.z,
+      smoothedCameraTarget.x, smoothedCameraTarget.y, smoothedCameraTarget.z,
+      true // "true" for smooth animation
+    );
   })
+  useEffect(() => {
+    console.log(boatRotation.current.rotation)
+    // camera.current.setLookAt(new THREE.Vecdtor3(0,0,0), new THREE.Vector3(0,0,0))
+    // camera.current.setPosition(new THREE.Vector3(0,1,0))
+    camera.current.minDistance = 0.1; // Set minimum distance to prevent camera clipping
+    camera.current.maxZoom = 0;  // Disable zooming to maintain focus on the boat
+    camera.current.minPolarAngle = 0; // Allow rotation around X axis
+    camera.current.maxPolarAngle = Math.PI; // Allow rotation around X axis up to 180 degrees
+  }, [])
+  
 
 
-  const { nodes, materials } = useGLTF('/Dredge/dredge_fan_art.glb')
+  const { nodes, materials } = useGLTF('/Dredge/boat.glb')
   return (
-    <group {...props} dispose={null} ref={body} position={[0,-0.07,-2]} scale={0.2}>
-      <group scale={0.1}>
-        {/* le bateau */}
-        <group position={[-8.55933, -4.17465, 0.99399]} rotation={[-0.10968, 0, 0.04049]}>
-          <group position={[-0.09814, 0.00398, 0]}>
-            <mesh geometry={nodes.pCylinder3_LT_Gray_0.geometry} material={materials.LT_Gray} />
-            <mesh geometry={nodes.pCylinder3_Med_Gray_0.geometry} material={materials.Med_Gray} />
+    <>
+    <CameraControls ref={camera} axis="X" onStart={()=>{setIsChanging(true)}} onEnd={()=>{setIsChanging(false)}}
+    />
+    <group {...props} dispose={null} ref={body} position={[0,-0.08,-2]} scale={0.01}>
+      <group>
+        <group position={[-8.56, -4.17, 0.99]} ref={boatRotation}>
+          <group position={[3.13, 3.87, -1.11]} >
             <mesh
+              
+              
+              geometry={nodes.pCylinder26_Dark_Grey_0.geometry}
+              material={materials.Dark_Grey}
+            />
+            <mesh
+              
+              
+              geometry={nodes.pCylinder26_LT_Gray_0.geometry}
+              material={materials.LT_Gray}
+            />
+            <mesh
+              
+              
+              geometry={nodes.pCylinder26_Med_Gray_0.geometry}
+              material={materials.Med_Gray}
+            />
+          </group>
+          <group position={[-0.1, 0, 0]}>
+            <mesh
+              
+              
               geometry={nodes.pCylinder3_Lightbulbs_0.geometry}
               material={materials.Lightbulbs}
             />
             <mesh
+              
+              
+              geometry={nodes.pCylinder3_LT_Gray_0.geometry}
+              material={materials.LT_Gray}
+            />
+            <mesh
+              
+              
+              geometry={nodes.pCylinder3_Med_Gray_0.geometry}
+              material={materials.Med_Gray}
+            />
+            <mesh
+              
+              
               geometry={nodes.pCylinder3_Wood_Stuff_0.geometry}
               material={materials.Wood_Stuff}
             />
           </group>
-          <group position={[3.13472, 3.86822, -1.11397]} rotation={[0.27132, -0.01086, -0.03901]}>
-            <mesh
-              geometry={nodes.pCylinder26_Dark_Grey_0.geometry}
-              material={materials.Dark_Grey}
-            />
-            <mesh geometry={nodes.pCylinder26_Med_Gray_0.geometry} material={materials.Med_Gray} />
-            <mesh geometry={nodes.pCylinder26_LT_Gray_0.geometry} material={materials.LT_Gray} />
-          </group>
-          <mesh geometry={nodes.pCylinder52_LT_Gray_0.geometry} material={materials.LT_Gray} />
-          <mesh geometry={nodes.pCylinder52_Dark_Grey_0.geometry} material={materials.Dark_Grey} />
-          <mesh geometry={nodes.pCylinder51_Dark_Grey_0.geometry} material={materials.Dark_Grey} />
-          <mesh geometry={nodes.pCylinder51_LT_Gray_0.geometry} material={materials.LT_Gray} />
           <mesh
-            geometry={nodes.pCylinder51_Brown_Rope_0.geometry}
+            
+            
+            geometry={nodes.Boat_lambert1_0.geometry}
+            material={materials.lambert1}
+          />
+          <mesh
+            
+            
+            geometry={nodes.Boat_Lower_Hull_0.geometry}
+            material={materials.Lower_Hull}
+          />
+          <mesh
+            
+            
+            geometry={nodes.Boat_White_Wood_0.geometry}
+            material={materials.White_Wood}
+          />
+          <mesh
+            
+            
+            geometry={nodes.Boat_Wood_Red_0.geometry}
+            material={materials.Wood_Red}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube10_Med_Gray_0001.geometry}
+            material={materials.Med_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube11_Med_Gray_0001.geometry}
+            material={materials.Med_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube18_Brown_Rope_0001.geometry}
             material={materials.Brown_Rope}
           />
-          <mesh geometry={nodes.pCylinder51_Bumpers_0.geometry} material={materials.Bumpers} />
-          <mesh geometry={nodes.pCylinder47_LT_Gray_0.geometry} material={materials.LT_Gray} />
-          <mesh geometry={nodes.pCylinder47_Dark_Grey_0.geometry} material={materials.Dark_Grey} />
           <mesh
-            geometry={nodes.pCylinder47_Brown_Rope_0.geometry}
+            
+            
+            geometry={nodes.pCube18_Med_Gray_0001.geometry}
+            material={materials.Med_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube20_Brown_Rope_0001.geometry}
             material={materials.Brown_Rope}
           />
-          <mesh geometry={nodes.pCylinder47_Bumpers_0.geometry} material={materials.Bumpers} />
-          <mesh geometry={nodes.pCylinder49_Dark_Grey_0.geometry} material={materials.Dark_Grey} />
-          <mesh geometry={nodes.pCylinder49_LT_Gray_0.geometry} material={materials.LT_Gray} />
           <mesh
-            geometry={nodes.pCylinder49_Brown_Rope_0.geometry}
+            
+            
+            geometry={nodes.pCube20_Med_Gray_0001.geometry}
+            material={materials.Med_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube21_Netting_0001.geometry}
+            material={materials.Netting}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder17_Brown_Rope_0001.geometry}
             material={materials.Brown_Rope}
           />
-          <mesh geometry={nodes.pCylinder49_Bumpers_0.geometry} material={materials.Bumpers} />
-          <mesh geometry={nodes.pCylinder45_LT_Gray_0.geometry} material={materials.LT_Gray} />
-          <mesh geometry={nodes.pCylinder45_Dark_Grey_0.geometry} material={materials.Dark_Grey} />
           <mesh
-            geometry={nodes.pCylinder45_Brown_Rope_0.geometry}
+            
+            
+            geometry={nodes.pCylinder17_Dark_Grey_0001.geometry}
+            material={materials.Dark_Grey}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder17_LT_Gray_0001.geometry}
+            material={materials.LT_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder27_Dark_Grey_0001.geometry}
+            material={materials.Dark_Grey}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder31_Brown_Rope_0001.geometry}
             material={materials.Brown_Rope}
           />
-          <mesh geometry={nodes.pCylinder45_Bumpers_0.geometry} material={materials.Bumpers} />
-          <mesh geometry={nodes.pCylinder23_LT_Gray_0.geometry} material={materials.LT_Gray} />
-          <mesh geometry={nodes.pCylinder23_Med_Gray_0.geometry} material={materials.Med_Gray} />
           <mesh
-            geometry={nodes.pCylinder23_Green_Cord_0.geometry}
-            material={materials.Green_Cord}
+            
+            
+            geometry={nodes.pCylinder31_Dark_Grey_0001.geometry}
+            material={materials.Dark_Grey}
           />
-          <mesh geometry={nodes.pCube13_Green_Cord_0.geometry} material={materials.Green_Cord} />
-          <mesh geometry={nodes.pCylinder35_lambert1_0.geometry} material={materials.lambert1} />
-          <mesh geometry={nodes.pCylinder34_lambert1_0.geometry} material={materials.lambert1} />
-          <mesh geometry={nodes.pCylinder33_lambert1_0.geometry} material={materials.lambert1} />
-          <mesh geometry={nodes.pCube22_Green_Cord_0.geometry} material={materials.Green_Cord} />
-          <mesh geometry={nodes.pCylinder36_lambert1_0.geometry} material={materials.lambert1} />
-          <mesh geometry={nodes.pCylinder37_lambert1_0.geometry} material={materials.lambert1} />
           <mesh
-            geometry={nodes.pCylinder22_Wood_Stuff_0.geometry}
-            material={materials.Wood_Stuff}
+            
+            
+            geometry={nodes.pCylinder31_LT_Gray_0001.geometry}
+            material={materials.LT_Gray}
           />
-          <mesh geometry={nodes.pCylinder22_LT_Gray_0.geometry} material={materials.LT_Gray} />
-          <mesh geometry={nodes.pCylinder23_LT_Gray_0_1.geometry} material={materials.LT_Gray} />
-          <mesh geometry={nodes.pCylinder23_Med_Gray_0_1.geometry} material={materials.Med_Gray} />
           <mesh
-            geometry={nodes.pCylinder23_Green_Cord_0_1.geometry}
-            material={materials.Green_Cord}
+            
+            
+            geometry={nodes.pCube10_Med_Gray_0.geometry}
+            material={materials.Med_Gray}
           />
-          <mesh geometry={nodes.pCube13_Green_Cord_0_1.geometry} material={materials.Green_Cord} />
-          <mesh geometry={nodes.pCylinder35_lambert1_0_1.geometry} material={materials.lambert1} />
-          <mesh geometry={nodes.pCylinder34_lambert1_0_1.geometry} material={materials.lambert1} />
-          <mesh geometry={nodes.pCylinder33_lambert1_0_1.geometry} material={materials.lambert1} />
-          <mesh geometry={nodes.pCube22_Green_Cord_0_1.geometry} material={materials.Green_Cord} />
-          <mesh geometry={nodes.pCylinder36_lambert1_0_1.geometry} material={materials.lambert1} />
-          <mesh geometry={nodes.pCylinder37_lambert1_0_1.geometry} material={materials.lambert1} />
           <mesh
-            geometry={nodes.pCylinder22_Wood_Stuff_0_1.geometry}
-            material={materials.Wood_Stuff}
+            
+            
+            geometry={nodes.pCube11_Med_Gray_0.geometry}
+            material={materials.Med_Gray}
           />
-          <mesh geometry={nodes.pCylinder22_LT_Gray_0_1.geometry} material={materials.LT_Gray} />
-          <mesh geometry={nodes.pCube25_Med_Gray_0.geometry} material={materials.Med_Gray} />
-          <mesh geometry={nodes.pCube25_LT_Gray_0.geometry} material={materials.LT_Gray} />
-          <mesh geometry={nodes.pCube25_Dark_Grey_0.geometry} material={materials.Dark_Grey} />
-          <mesh geometry={nodes.pCube24_Med_Gray_0.geometry} material={materials.Med_Gray} />
-          <mesh geometry={nodes.pCube23_Med_Gray_0.geometry} material={materials.Med_Gray} />
-          <mesh geometry={nodes.pCube11_Med_Gray_0.geometry} material={materials.Med_Gray} />
-          <mesh geometry={nodes.pCylinder27_Dark_Grey_0.geometry} material={materials.Dark_Grey} />
-          <mesh geometry={nodes.pCylinder17_LT_Gray_0.geometry} material={materials.LT_Gray} />
           <mesh
+            
+            
+            geometry={nodes.pCube18_Brown_Rope_0.geometry}
+            material={materials.Brown_Rope}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube18_Med_Gray_0.geometry}
+            material={materials.Med_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube20_Brown_Rope_0.geometry}
+            material={materials.Brown_Rope}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube20_Med_Gray_0.geometry}
+            material={materials.Med_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube21_Netting_0.geometry}
+            material={materials.Netting}
+          />
+          <mesh
+            
+            
             geometry={nodes.pCylinder17_Brown_Rope_0.geometry}
             material={materials.Brown_Rope}
           />
-          <mesh geometry={nodes.pCylinder17_Dark_Grey_0.geometry} material={materials.Dark_Grey} />
-          <mesh geometry={nodes.pCylinder31_LT_Gray_0.geometry} material={materials.LT_Gray} />
           <mesh
+            
+            
+            geometry={nodes.pCylinder17_Dark_Grey_0.geometry}
+            material={materials.Dark_Grey}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder17_LT_Gray_0.geometry}
+            material={materials.LT_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder27_Dark_Grey_0.geometry}
+            material={materials.Dark_Grey}
+          />
+          <mesh
+            
+            
             geometry={nodes.pCylinder31_Brown_Rope_0.geometry}
             material={materials.Brown_Rope}
           />
-          <mesh geometry={nodes.pCylinder31_Dark_Grey_0.geometry} material={materials.Dark_Grey} />
-          <mesh geometry={nodes.pCube18_Brown_Rope_0.geometry} material={materials.Brown_Rope} />
-          <mesh geometry={nodes.pCube18_Med_Gray_0.geometry} material={materials.Med_Gray} />
-          <mesh geometry={nodes.pCube20_Brown_Rope_0.geometry} material={materials.Brown_Rope} />
-          <mesh geometry={nodes.pCube20_Med_Gray_0.geometry} material={materials.Med_Gray} />
-          <mesh geometry={nodes.pCube21_Netting_0.geometry} material={materials.Netting} />
-          <mesh geometry={nodes.pCube10_Med_Gray_0.geometry} material={materials.Med_Gray} />
-          <mesh geometry={nodes.pCube11_Med_Gray_0_1.geometry} material={materials.Med_Gray} />
           <mesh
-            geometry={nodes.pCylinder27_Dark_Grey_0_1.geometry}
+            
+            
+            geometry={nodes.pCylinder31_Dark_Grey_0.geometry}
             material={materials.Dark_Grey}
           />
-          <mesh geometry={nodes.pCylinder17_LT_Gray_0_1.geometry} material={materials.LT_Gray} />
           <mesh
-            geometry={nodes.pCylinder17_Brown_Rope_0_1.geometry}
-            material={materials.Brown_Rope}
+            
+            
+            geometry={nodes.pCylinder31_LT_Gray_0.geometry}
+            material={materials.LT_Gray}
           />
           <mesh
-            geometry={nodes.pCylinder17_Dark_Grey_0_1.geometry}
+            
+            
+            geometry={nodes.pCube12_Lower_Hull_0.geometry}
+            material={materials.Lower_Hull}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube14_Dark_Grey_0.geometry}
             material={materials.Dark_Grey}
           />
-          <mesh geometry={nodes.pCylinder31_LT_Gray_0_1.geometry} material={materials.LT_Gray} />
           <mesh
-            geometry={nodes.pCylinder31_Brown_Rope_0_1.geometry}
-            material={materials.Brown_Rope}
+            
+            
+            geometry={nodes.pCube2_Brassy_0.geometry}
+            material={materials.Brassy}
           />
           <mesh
-            geometry={nodes.pCylinder31_Dark_Grey_0_1.geometry}
+            
+            
+            geometry={nodes.pCube2_Dark_Grey_0.geometry}
             material={materials.Dark_Grey}
           />
-          <mesh geometry={nodes.pCube18_Brown_Rope_0_1.geometry} material={materials.Brown_Rope} />
-          <mesh geometry={nodes.pCube18_Med_Gray_0_1.geometry} material={materials.Med_Gray} />
-          <mesh geometry={nodes.pCube20_Brown_Rope_0_1.geometry} material={materials.Brown_Rope} />
-          <mesh geometry={nodes.pCube20_Med_Gray_0_1.geometry} material={materials.Med_Gray} />
-          <mesh geometry={nodes.pCube21_Netting_0_1.geometry} material={materials.Netting} />
-          <mesh geometry={nodes.pCube10_Med_Gray_0_1.geometry} material={materials.Med_Gray} />
-          <mesh geometry={nodes.pCylinder41_Med_Gray_0.geometry} material={materials.Med_Gray} />
           <mesh
-            geometry={nodes.pCylinder41_Glowing_WIndows_0.geometry}
+            
+            
+            geometry={nodes.pCube2_Decking_0.geometry}
+            material={materials.Decking}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube2_Glowing_WIndows_0.geometry}
             material={materials.Glowing_WIndows}
           />
-          <mesh geometry={nodes.pCylinder40_Med_Gray_0.geometry} material={materials.Med_Gray} />
           <mesh
-            geometry={nodes.pCylinder40_Glowing_WIndows_0.geometry}
+            
+            
+            geometry={nodes.pCube2_lambert1_0.geometry}
+            material={materials.lambert1}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube2_LT_Gray_0.geometry}
+            material={materials.LT_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube2_Med_Gray_0.geometry}
+            material={materials.Med_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube2_Side_Bridge1_0.geometry}
+            material={materials.Side_Bridge1}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube2_Side_Glow_0.geometry}
+            material={materials.Side_Glow}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube2_Wood_Red_0.geometry}
+            material={materials.Wood_Red}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube23_Med_Gray_0.geometry}
+            material={materials.Med_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube24_Med_Gray_0.geometry}
+            material={materials.Med_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube25_Dark_Grey_0.geometry}
+            material={materials.Dark_Grey}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube25_LT_Gray_0.geometry}
+            material={materials.LT_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube25_Med_Gray_0.geometry}
+            material={materials.Med_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube26_Lower_Hull_0.geometry}
+            material={materials.Lower_Hull}
+            position={[7.32, 4.99, -1.5]}
+            rotation={[-0.41, 0.01, 0.07]}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube3_Brassy_0.geometry}
+            material={materials.Brassy}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube3_Dark_Grey_0.geometry}
+            material={materials.Dark_Grey}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube3_Glowing_WIndows_0.geometry}
             material={materials.Glowing_WIndows}
           />
-          <mesh geometry={nodes.pCylinder23_LT_Gray_0_2.geometry} material={materials.LT_Gray} />
-          <mesh geometry={nodes.pCylinder23_Med_Gray_0_2.geometry} material={materials.Med_Gray} />
           <mesh
-            geometry={nodes.pCylinder23_Green_Cord_0_2.geometry}
-            material={materials.Green_Cord}
+            
+            
+            geometry={nodes.pCube3_Med_Gray_0.geometry}
+            material={materials.Med_Gray}
           />
-          <mesh geometry={nodes.pCube13_Green_Cord_0_2.geometry} material={materials.Green_Cord} />
-          <mesh geometry={nodes.pCylinder35_lambert1_0_2.geometry} material={materials.lambert1} />
-          <mesh geometry={nodes.pCylinder34_lambert1_0_2.geometry} material={materials.lambert1} />
-          <mesh geometry={nodes.pCylinder33_lambert1_0_2.geometry} material={materials.lambert1} />
-          <mesh geometry={nodes.pCube22_Green_Cord_0_2.geometry} material={materials.Green_Cord} />
-          <mesh geometry={nodes.pCylinder36_lambert1_0_2.geometry} material={materials.lambert1} />
-          <mesh geometry={nodes.pCylinder37_lambert1_0_2.geometry} material={materials.lambert1} />
           <mesh
-            geometry={nodes.pCylinder22_Wood_Stuff_0_2.geometry}
-            material={materials.Wood_Stuff}
+            
+            
+            geometry={nodes.pCube3_Wood_Red_0.geometry}
+            material={materials.Wood_Red}
           />
-          <mesh geometry={nodes.pCylinder22_LT_Gray_0_2.geometry} material={materials.LT_Gray} />
-          <mesh geometry={nodes.pCylinder23_LT_Gray_0_3.geometry} material={materials.LT_Gray} />
-          <mesh geometry={nodes.pCylinder23_Med_Gray_0_3.geometry} material={materials.Med_Gray} />
           <mesh
-            geometry={nodes.pCylinder23_Green_Cord_0_3.geometry}
-            material={materials.Green_Cord}
+            
+            
+            geometry={nodes.pCube7_LT_Gray_0.geometry}
+            material={materials.LT_Gray}
           />
-          <mesh geometry={nodes.pCube13_Green_Cord_0_3.geometry} material={materials.Green_Cord} />
-          <mesh geometry={nodes.pCylinder35_lambert1_0_3.geometry} material={materials.lambert1} />
-          <mesh geometry={nodes.pCylinder34_lambert1_0_3.geometry} material={materials.lambert1} />
-          <mesh geometry={nodes.pCylinder33_lambert1_0_3.geometry} material={materials.lambert1} />
-          <mesh geometry={nodes.pCube22_Green_Cord_0_3.geometry} material={materials.Green_Cord} />
-          <mesh geometry={nodes.pCylinder36_lambert1_0_3.geometry} material={materials.lambert1} />
-          <mesh geometry={nodes.pCylinder37_lambert1_0_3.geometry} material={materials.lambert1} />
           <mesh
-            geometry={nodes.pCylinder22_Wood_Stuff_0_3.geometry}
-            material={materials.Wood_Stuff}
+            
+            
+            geometry={nodes.pCube7_Med_Gray_0.geometry}
+            material={materials.Med_Gray}
           />
-          <mesh geometry={nodes.pCylinder22_LT_Gray_0_3.geometry} material={materials.LT_Gray} />
-          <mesh geometry={nodes.pSphere2_Light_Glass_0.geometry} material={materials.Light_Glass} />
-          <mesh geometry={nodes.pCylinder32_LT_Gray_0.geometry} material={materials.LT_Gray} />
-          <mesh geometry={nodes.pCylinder32_Med_Gray_0.geometry} material={materials.Med_Gray} />
           <mesh
+            
+            
+            geometry={nodes.pCube8_Med_Gray_0.geometry}
+            material={materials.Med_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube9_Med_Gray_0.geometry}
+            material={materials.Med_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder12_Med_Gray_0.geometry}
+            material={materials.Med_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder13_Bumpers_0.geometry}
+            material={materials.Bumpers}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder13_LT_Gray_0.geometry}
+            material={materials.LT_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder13_Med_Gray_0.geometry}
+            material={materials.Med_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder14_Bumpers_0.geometry}
+            material={materials.Bumpers}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder14_LT_Gray_0.geometry}
+            material={materials.LT_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder14_Med_Gray_0.geometry}
+            material={materials.Med_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder15_Glowing_WIndows_0.geometry}
+            material={materials.Glowing_WIndows}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder15_Med_Gray_0.geometry}
+            material={materials.Med_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder25_Dark_Grey_0.geometry}
+            material={materials.Dark_Grey}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder25_LT_Gray_0.geometry}
+            material={materials.LT_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder25_Med_Gray_0.geometry}
+            material={materials.Med_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder30_Dark_Grey_0.geometry}
+            material={materials.Dark_Grey}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder30_LT_Gray_0.geometry}
+            material={materials.LT_Gray}
+          />
+          <mesh
+            
+            
             geometry={nodes.pCylinder32_Lightbulbs_0.geometry}
             material={materials.Lightbulbs}
           />
           <mesh
+            
+            
+            geometry={nodes.pCylinder32_LT_Gray_0.geometry}
+            material={materials.LT_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder32_Med_Gray_0.geometry}
+            material={materials.Med_Gray}
+          />
+          <mesh
+            
+            
             geometry={nodes.pCylinder32_Wood_Stuff_0.geometry}
             material={materials.Wood_Stuff}
           />
-          <mesh geometry={nodes.pSphere1_Light_Glass_0.geometry} material={materials.Light_Glass} />
-          <mesh geometry={nodes.pCylinder30_LT_Gray_0.geometry} material={materials.LT_Gray} />
-          <mesh geometry={nodes.pCylinder30_Dark_Grey_0.geometry} material={materials.Dark_Grey} />
-          <mesh geometry={nodes.pCube14_Dark_Grey_0.geometry} material={materials.Dark_Grey} />
-          <mesh geometry={nodes.pCylinder25_LT_Gray_0.geometry} material={materials.LT_Gray} />
-          <mesh geometry={nodes.pCylinder25_Med_Gray_0.geometry} material={materials.Med_Gray} />
-          <mesh geometry={nodes.pCylinder25_Dark_Grey_0.geometry} material={materials.Dark_Grey} />
-          <mesh geometry={nodes.pCube12_Lower_Hull_0.geometry} material={materials.Lower_Hull} />
-          <mesh geometry={nodes.pCylinder15_Med_Gray_0.geometry} material={materials.Med_Gray} />
           <mesh
-            geometry={nodes.pCylinder15_Glowing_WIndows_0.geometry}
+            
+            
+            geometry={nodes.pCylinder40_Glowing_WIndows_0.geometry}
             material={materials.Glowing_WIndows}
           />
-          <mesh geometry={nodes.pCube9_Med_Gray_0.geometry} material={materials.Med_Gray} />
-          <mesh geometry={nodes.pCube8_Med_Gray_0.geometry} material={materials.Med_Gray} />
-          <mesh geometry={nodes.pCylinder14_Med_Gray_0.geometry} material={materials.Med_Gray} />
-          <mesh geometry={nodes.pCylinder14_Bumpers_0.geometry} material={materials.Bumpers} />
-          <mesh geometry={nodes.pCylinder14_LT_Gray_0.geometry} material={materials.LT_Gray} />
-          <mesh geometry={nodes.pCylinder13_Med_Gray_0.geometry} material={materials.Med_Gray} />
-          <mesh geometry={nodes.pCylinder13_Bumpers_0.geometry} material={materials.Bumpers} />
-          <mesh geometry={nodes.pCylinder13_LT_Gray_0.geometry} material={materials.LT_Gray} />
-          <mesh geometry={nodes.pCube7_LT_Gray_0.geometry} material={materials.LT_Gray} />
-          <mesh geometry={nodes.pCube7_Med_Gray_0.geometry} material={materials.Med_Gray} />
-          <mesh geometry={nodes.pCylinder12_Med_Gray_0.geometry} material={materials.Med_Gray} />
-          <mesh geometry={nodes.pCylinder9_Med_Gray_0.geometry} material={materials.Med_Gray} />
-          <mesh geometry={nodes.pCylinder9_Dark_Grey_0.geometry} material={materials.Dark_Grey} />
-          <mesh geometry={nodes.pCylinder9_LT_Gray_0.geometry} material={materials.LT_Gray} />
-          <mesh geometry={nodes.pCylinder6_Med_Gray_0.geometry} material={materials.Med_Gray} />
-          <mesh geometry={nodes.pCylinder6_Dark_Grey_0.geometry} material={materials.Dark_Grey} />
-          <mesh geometry={nodes.pCylinder6_LT_Gray_0.geometry} material={materials.LT_Gray} />
-          <mesh geometry={nodes.pCylinder5_Med_Gray_0.geometry} material={materials.Med_Gray} />
-          <mesh geometry={nodes.pCylinder5_Dark_Grey_0.geometry} material={materials.Dark_Grey} />
-          <mesh geometry={nodes.pCylinder5_LT_Gray_0.geometry} material={materials.LT_Gray} />
-          <mesh geometry={nodes.pCube3_Wood_Red_0.geometry} material={materials.Wood_Red} />
-          <mesh geometry={nodes.pCube3_Dark_Grey_0.geometry} material={materials.Dark_Grey} />
-          <mesh geometry={nodes.pCube3_Brassy_0.geometry} material={materials.Brassy} />
-          <mesh geometry={nodes.pCube3_Med_Gray_0.geometry} material={materials.Med_Gray} />
           <mesh
-            geometry={nodes.pCube3_Glowing_WIndows_0.geometry}
+            
+            
+            geometry={nodes.pCylinder40_Med_Gray_0.geometry}
+            material={materials.Med_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder41_Glowing_WIndows_0.geometry}
             material={materials.Glowing_WIndows}
           />
-          <mesh geometry={nodes.pCube2_Decking_0.geometry} material={materials.Decking} />
-          <mesh geometry={nodes.pCube2_Dark_Grey_0.geometry} material={materials.Dark_Grey} />
-          <mesh geometry={nodes.pCube2_lambert1_0.geometry} material={materials.lambert1} />
-          <mesh geometry={nodes.pCube2_Side_Bridge1_0.geometry} material={materials.Side_Bridge1} />
-          <mesh geometry={nodes.pCube2_LT_Gray_0.geometry} material={materials.LT_Gray} />
-          <mesh geometry={nodes.pCube2_Brassy_0.geometry} material={materials.Brassy} />
-          <mesh geometry={nodes.pCube2_Side_Glow_0.geometry} material={materials.Side_Glow} />
-          <mesh geometry={nodes.pCube2_Med_Gray_0.geometry} material={materials.Med_Gray} />
-          <mesh geometry={nodes.pCube2_Wood_Red_0.geometry} material={materials.Wood_Red} />
           <mesh
-            geometry={nodes.pCube2_Glowing_WIndows_0.geometry}
-            material={materials.Glowing_WIndows}
+            
+            
+            geometry={nodes.pCylinder41_Med_Gray_0.geometry}
+            material={materials.Med_Gray}
           />
-          <mesh geometry={nodes.Boat_Lower_Hull_0.geometry} material={materials.Lower_Hull} />
-          <mesh geometry={nodes.Boat_White_Wood_0.geometry} material={materials.White_Wood} />
-          <mesh geometry={nodes.Boat_Wood_Red_0.geometry} material={materials.Wood_Red} />
-          <mesh geometry={nodes.Boat_lambert1_0.geometry} material={materials.lambert1} />
           <mesh
-            geometry={nodes.pCube26_Lower_Hull_0.geometry}
-            material={materials.Lower_Hull}
-            position={[7.31585, 4.9866, -1.50443]}
-            rotation={[-0.40813, 0.00578, 0.06576]}
+            
+            
+            geometry={nodes.pCylinder45_Brown_Rope_0.geometry}
+            material={materials.Brown_Rope}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder45_Bumpers_0.geometry}
+            material={materials.Bumpers}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder45_Dark_Grey_0.geometry}
+            material={materials.Dark_Grey}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder45_LT_Gray_0.geometry}
+            material={materials.LT_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder49_Brown_Rope_0.geometry}
+            material={materials.Brown_Rope}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder49_Bumpers_0.geometry}
+            material={materials.Bumpers}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder49_Dark_Grey_0.geometry}
+            material={materials.Dark_Grey}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder49_LT_Gray_0.geometry}
+            material={materials.LT_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder47_Brown_Rope_0.geometry}
+            material={materials.Brown_Rope}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder47_Bumpers_0.geometry}
+            material={materials.Bumpers}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder47_Dark_Grey_0.geometry}
+            material={materials.Dark_Grey}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder47_LT_Gray_0.geometry}
+            material={materials.LT_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder5_Dark_Grey_0.geometry}
+            material={materials.Dark_Grey}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder5_LT_Gray_0.geometry}
+            material={materials.LT_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder5_Med_Gray_0.geometry}
+            material={materials.Med_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder51_Brown_Rope_0.geometry}
+            material={materials.Brown_Rope}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder51_Bumpers_0.geometry}
+            material={materials.Bumpers}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder51_Dark_Grey_0.geometry}
+            material={materials.Dark_Grey}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder51_LT_Gray_0.geometry}
+            material={materials.LT_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder52_Dark_Grey_0.geometry}
+            material={materials.Dark_Grey}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder52_LT_Gray_0.geometry}
+            material={materials.LT_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder6_Dark_Grey_0.geometry}
+            material={materials.Dark_Grey}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder6_LT_Gray_0.geometry}
+            material={materials.LT_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder6_Med_Gray_0.geometry}
+            material={materials.Med_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder9_Dark_Grey_0.geometry}
+            material={materials.Dark_Grey}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder9_LT_Gray_0.geometry}
+            material={materials.LT_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder9_Med_Gray_0.geometry}
+            material={materials.Med_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube13_Green_Cord_0003.geometry}
+            material={materials.Green_Cord}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube22_Green_Cord_0003.geometry}
+            material={materials.Green_Cord}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder22_LT_Gray_0003.geometry}
+            material={materials.LT_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder22_Wood_Stuff_0003.geometry}
+            material={materials.Wood_Stuff}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder23_Green_Cord_0003.geometry}
+            material={materials.Green_Cord}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder23_LT_Gray_0003.geometry}
+            material={materials.LT_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder23_Med_Gray_0003.geometry}
+            material={materials.Med_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder33_lambert1_0003.geometry}
+            material={materials.lambert1}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder34_lambert1_0003.geometry}
+            material={materials.lambert1}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder35_lambert1_0003.geometry}
+            material={materials.lambert1}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder36_lambert1_0003.geometry}
+            material={materials.lambert1}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder37_lambert1_0003.geometry}
+            material={materials.lambert1}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube13_Green_Cord_0002.geometry}
+            material={materials.Green_Cord}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube22_Green_Cord_0002.geometry}
+            material={materials.Green_Cord}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder22_LT_Gray_0002.geometry}
+            material={materials.LT_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder22_Wood_Stuff_0002.geometry}
+            material={materials.Wood_Stuff}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder23_Green_Cord_0002.geometry}
+            material={materials.Green_Cord}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder23_LT_Gray_0002.geometry}
+            material={materials.LT_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder23_Med_Gray_0002.geometry}
+            material={materials.Med_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder33_lambert1_0002.geometry}
+            material={materials.lambert1}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder34_lambert1_0002.geometry}
+            material={materials.lambert1}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder35_lambert1_0002.geometry}
+            material={materials.lambert1}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder36_lambert1_0002.geometry}
+            material={materials.lambert1}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder37_lambert1_0002.geometry}
+            material={materials.lambert1}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube13_Green_Cord_0001.geometry}
+            material={materials.Green_Cord}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube22_Green_Cord_0001.geometry}
+            material={materials.Green_Cord}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder22_LT_Gray_0001.geometry}
+            material={materials.LT_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder22_Wood_Stuff_0001.geometry}
+            material={materials.Wood_Stuff}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder23_Green_Cord_0001.geometry}
+            material={materials.Green_Cord}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder23_LT_Gray_0001.geometry}
+            material={materials.LT_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder23_Med_Gray_0001.geometry}
+            material={materials.Med_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder33_lambert1_0001.geometry}
+            material={materials.lambert1}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder34_lambert1_0001.geometry}
+            material={materials.lambert1}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder35_lambert1_0001.geometry}
+            material={materials.lambert1}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder36_lambert1_0001.geometry}
+            material={materials.lambert1}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder37_lambert1_0001.geometry}
+            material={materials.lambert1}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube13_Green_Cord_0.geometry}
+            material={materials.Green_Cord}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCube22_Green_Cord_0.geometry}
+            material={materials.Green_Cord}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder22_LT_Gray_0.geometry}
+            material={materials.LT_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder22_Wood_Stuff_0.geometry}
+            material={materials.Wood_Stuff}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder23_Green_Cord_0.geometry}
+            material={materials.Green_Cord}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder23_LT_Gray_0.geometry}
+            material={materials.LT_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder23_Med_Gray_0.geometry}
+            material={materials.Med_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder33_lambert1_0.geometry}
+            material={materials.lambert1}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder34_lambert1_0.geometry}
+            material={materials.lambert1}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder35_lambert1_0.geometry}
+            material={materials.lambert1}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder36_lambert1_0.geometry}
+            material={materials.lambert1}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder37_lambert1_0.geometry}
+            material={materials.lambert1}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pSphere1_Light_Glass_0.geometry}
+            material={materials.Light_Glass}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pSphere2_Light_Glass_0.geometry}
+            material={materials.Light_Glass}
           />
         </group>
-        {/* les deux moteurs */}
-        <group position={[0.59577, -2.2309, -0.16022]} scale={0.494}>
-          <mesh geometry={nodes.pCylinder53_LT_Gray_0.geometry} material={materials.LT_Gray} />
-          <mesh geometry={nodes.pCylinder53_Med_Gray_0.geometry} material={materials.Med_Gray} />
+        <group position={[0.6, -2.23, -0.16]} scale={0.49} ref={elice1}>
+          <mesh
+            
+            
+            geometry={nodes.pCylinder53_LT_Gray_0.geometry}
+            material={materials.LT_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder53_Med_Gray_0.geometry}
+            material={materials.Med_Gray}
+          />
         </group>
-        <group position={[0.59577, -2.01687, 1.86974]} scale={0.494}>
-          <mesh geometry={nodes.pCylinder54_LT_Gray_0.geometry} material={materials.LT_Gray} />
-          <mesh geometry={nodes.pCylinder54_Med_Gray_0.geometry} material={materials.Med_Gray} />
+        <group position={[0.6, -2.02, 1.87]} scale={0.49} ref={elice2}>
+          <mesh
+            
+            
+            geometry={nodes.pCylinder54_LT_Gray_0.geometry}
+            material={materials.LT_Gray}
+          />
+          <mesh
+            
+            
+            geometry={nodes.pCylinder54_Med_Gray_0.geometry}
+            material={materials.Med_Gray}
+          />
         </group>
       </group>
     </group>
+    </>
+    
   )
 }
 
-useGLTF.preload('/Dredge/dredge_fan_art.glb')
+useGLTF.preload('/Dredge/boat.glb')

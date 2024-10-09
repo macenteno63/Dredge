@@ -19,6 +19,8 @@ root.render(
             far: 250,
             position: [ -50,20,0 ]
         } }
+        performance={'high-performance'}
+        renderer={{ devicePixelRatio:1 }}
         >
         <Suspense fallback={<Loader/>}>
             <Experience /> 

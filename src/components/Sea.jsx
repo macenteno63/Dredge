@@ -1,32 +1,81 @@
+import { shaderMaterial } from "@react-three/drei";
+import { Color } from "three";
+import { useControls } from "leva";
+import { extend, useFrame } from '@react-three/fiber'
+import waterVertexShader from '../shaders/water/waterVertexShader.glsl';
+import waterFragmentShader from '../shaders/water/waterFragmentShader.glsl';
+import { useRef } from "react";
 
 
-import * as THREE from 'three';
-import { useFrame,extend,useThree,useLoader } from '@react-three/fiber';
-import { useRef,useMemo } from 'react';
-import { Water } from 'three-stdlib'
+export const WaterMaterial = shaderMaterial(
+  {
+    uColor: new Color("skyblue"),
+    uOpacity: 0.8,
+    uTime: 0,
+    uSpeed: 0.5,
+    uRepeat: 20.0,
+    uNoiseType: 0,
+    uFoam: 0.4,
+    uFoamTop: 0.7,
+  },
+  waterVertexShader,
+  waterFragmentShader
+)
+extend({ WaterMaterial });
 
-extend({ Water })
-export default function CartoonSea() {
-  const ref = useRef()
-  const gl = useThree((state) => state.gl)
-  const waterNormals = useLoader(THREE.TextureLoader, '/waternormals.jpeg')
-  waterNormals.wrapS = waterNormals.wrapT = THREE.RepeatWrapping
-  const geom = useMemo(() => new THREE.PlaneGeometry(10000, 10000), [])
-  const config = useMemo(
-    () => ({
-      textureWidth: 512,
-      textureHeight: 512,
-      waterNormals,
-      sunDirection: new THREE.Vector3(),
-      sunColor: 0xffffff,
-      waterColor: 0x001e0f,
-      distortionScale: 3.7,
-      fog: false,
-      format: gl.encoding,
-      alpha: 0.5
-    }),
-    [waterNormals]
-  )
-  useFrame((state, delta) => (ref.current.material.uniforms.time.value += delta))
-  return <water ref={ref} args={[geom, config]} rotation-x={-Math.PI / 2} />
-}
+const Water = ({ ...props }) => {
+  const waterMaterialRef = useRef();
+  const { waterColor, waterOpacity, speed, noiseType, foam, foamTop, repeat } =
+    useControls({
+      waterOpacity: { value: 0.8, min: 0, max: 1 },
+      waterColor: "#00c3ff",
+      speed: { value: 0.5, min: 0, max: 5 },
+      repeat: {
+        value: 30,
+        min: 1,
+        max: 100,
+      },
+      foam: {
+        value: 0.4,
+        min: 0,
+        max: 1,
+      },
+      foamTop: {
+        value: 0.7,
+        min: 0,
+        max: 1,
+      },
+      noiseType: {
+        value: 0,
+        options: {
+          Perlin: 0,
+          Voronoi: 1,
+        },
+      },
+    });
+
+  useFrame(({ clock }) => {
+    if (waterMaterialRef.current) {
+      waterMaterialRef.current.uniforms.uTime.value = clock.getElapsedTime();
+    }
+  });
+
+  return (
+    <mesh {...props}>
+      <planeGeometry args={[10, 10, 15, 15]} />
+      <waterMaterial
+        ref={waterMaterialRef}
+        uColor={new Color(waterColor)}
+        transparent
+        uOpacity={waterOpacity}
+        uNoiseType={noiseType}
+        uSpeed={speed}
+        uRepeat={repeat}
+        uFoam={foam}
+        uFoamTop={foamTop}
+      />
+    </mesh>
+  );
+};
+
+export default Water;

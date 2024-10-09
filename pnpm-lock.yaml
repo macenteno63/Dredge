@@ -14,6 +14,9 @@ importers:
       '@react-three/fiber':
         specifier: ^8.16.8
         version: 8.17.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(three@0.166.1)
+      add:
+        specifier: ^2.0.6
+        version: 2.0.6
       r3f-perf:
         specifier: ^7.2.1
         version: 7.2.1(@react-three/fiber@8.17.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(three@0.166.1))(@types/react@18.3.8)(@types/three@0.163.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(three@0.166.1)
@@ -654,6 +657,9 @@ packages:
     engines: {node: ^14.18.0 || >=16.0.0}
     peerDependencies:
       vite: ^4.2.0 || ^5.0.0
+
+  add@2.0.6:
+    resolution: {integrity: sha512-j5QzrmsokwWWp6kUcJQySpbG+xfOBqqKnup3OIk1pz+kB/80SLorZ9V8zHFLO92Lcd+hbvq8bT+zOGoPkmBV0Q==}
 
   ansi-styles@3.2.1:
     resolution: {integrity: sha512-VT0ZI6kZRdTh8YyJw3SMbYm/u+NqfsAxEpWO0Pf9sq8/e94WxxOpPKx9FR1FlyCtOVDNOQ+8ntlqFxiRc+r5qA==}
@@ -1864,6 +1870,8 @@ snapshots:
       vite: 5.4.6
     transitivePeerDependencies:
       - supports-color
+
+  add@2.0.6: {}
 
   ansi-styles@3.2.1:
     dependencies:
