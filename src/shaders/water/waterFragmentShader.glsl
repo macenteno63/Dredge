@@ -8,6 +8,8 @@ uniform float uRepeat;
 uniform int uNoiseType;
 uniform float uFoam;
 uniform float uFoamTop;
+uniform vec2 uBoatPosition; // Add uniform for boat position
+uniform float uRippleStrength; // Add uniform for ripple strength
 
 void main() {
   float adjustedTime = uTime * uSpeed;
@@ -18,9 +20,14 @@ void main() {
   // FOAM
   noise = smoothstep(uFoam, uFoamTop, noise);
 
-  //  COLOR
-  vec3 intermediateColor = uColor * 1.8;
-  vec3 topColor = intermediateColor * 2.0;
+  // RIPPLE EFFECT
+  // float distanceToBoat = distance(vUv, uBoatPosition);
+  // float rippleEffect = exp(-distanceToBoat * uRippleStrength);
+  //noise += rippleEffect;
+
+  // COLOR
+  vec3 intermediateColor = uColor * 2.0;
+  vec3 topColor = intermediateColor * 3.0;
   vec3 finalColor = uColor;
   finalColor = mix(uColor, intermediateColor, step(0.01, noise));
   finalColor = mix(finalColor, topColor, step(1.0, noise));

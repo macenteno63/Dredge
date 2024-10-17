@@ -1,11 +1,12 @@
 import { shaderMaterial } from "@react-three/drei";
-import { Color } from "three";
+import { Color, RGBAFormat } from "three";
 import { useControls } from "leva";
 import { extend, useFrame } from '@react-three/fiber'
 import waterVertexShader from '../shaders/water/waterVertexShader.glsl';
 import waterFragmentShader from '../shaders/water/waterFragmentShader.glsl';
 import { useRef } from "react";
-
+import useGame from '../stores/Game.jsx'
+import * as THREE from 'three'
 
 export const WaterMaterial = shaderMaterial(
   {
@@ -27,8 +28,8 @@ const Water = ({ ...props }) => {
   const waterMaterialRef = useRef();
   const { waterColor, waterOpacity, speed, noiseType, foam, foamTop, repeat } =
     useControls({
-      waterOpacity: { value: 0.8, min: 0, max: 1 },
-      waterColor: "#00c3ff",
+      waterOpacity: { value: 0.9, min: 0, max: 1 },
+      waterColor: "#268c9a",
       speed: { value: 0.5, min: 0, max: 5 },
       repeat: {
         value: 30,
@@ -57,11 +58,14 @@ const Water = ({ ...props }) => {
   useFrame(({ clock }) => {
     if (waterMaterialRef.current) {
       waterMaterialRef.current.uniforms.uTime.value = clock.getElapsedTime();
+      const boatPosition = useGame.getState().boatPosition
+      
+      waterMaterialRef.current.uniforms.uBoatPosition = new THREE.Vector2(boatPosition.x,boatPosition.z)
     }
   });
 
   return (
-    <mesh {...props}>
+    <mesh {...props} receiveShadow>
       <planeGeometry args={[10, 10, 15, 15]} />
       <waterMaterial
         ref={waterMaterialRef}
@@ -73,7 +77,9 @@ const Water = ({ ...props }) => {
         uRepeat={repeat}
         uFoam={foam}
         uFoamTop={foamTop}
+        uRippleStrength={10}
       />
+      {/* <meshStandardMaterial color="skyblue" /> */}
     </mesh>
   );
 };

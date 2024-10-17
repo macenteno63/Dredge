@@ -11,7 +11,8 @@ import { useGLTF, useKeyboardControls,CameraControls } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { lerp } from 'three/src/math/MathUtils.js'
-    // Fonction pour évaluer une courbe de Bézier cubique
+import { CameraHelperComponent } from '../Experience'
+import useGame from '../stores/Game.jsx'
 
 export function BoatModel(props) {
   const elice1 = useRef()
@@ -19,6 +20,7 @@ export function BoatModel(props) {
   const body = useRef()
   const boatRotation = useRef()
   const camera = useRef()
+  const perspectiveCamera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.001, 250)
   const [ subscribeKeys, getKeys ] = useKeyboardControls()
   const [isChanging, setIsChanging] = useState(false)
 
@@ -44,7 +46,7 @@ export function BoatModel(props) {
       setCurrentSpeed(newSpeed)
       elice1.current.rotation.x += 15 * delta
       elice2.current.rotation.x += 15 * delta
-      boatRotation.current.rotation.x += Math.sin(state.clock.elapsedTime) * 0.1 * delta
+      boatRotation.current.rotation.x += Math.sin(state.clock.elapsedTime) * delta * 0.1
     } 
     else if(backward) {
       const newSpeed = lerp(currentSpeed, -maxSpeedBackward, accelerationRate)
@@ -70,10 +72,9 @@ export function BoatModel(props) {
     if (rightward) {
       body.current.rotation.y -= 1 * delta
     }
-
-    // roulis du bateau
-    // body.current.rotation
-
+    //update boat position
+    // console.log(body.current.position)
+    useGame.getState().updateBoatPosition(body.current.position)
 
 
     //Camera
@@ -99,38 +100,42 @@ export function BoatModel(props) {
     console.log(boatRotation.current.rotation)
     // camera.current.setLookAt(new THREE.Vecdtor3(0,0,0), new THREE.Vector3(0,0,0))
     // camera.current.setPosition(new THREE.Vector3(0,1,0))
-    camera.current.minDistance = 0.1; // Set minimum distance to prevent camera clipping
-    camera.current.maxZoom = 0;  // Disable zooming to maintain focus on the boat
-    camera.current.minPolarAngle = 0; // Allow rotation around X axis
-    camera.current.maxPolarAngle = Math.PI; // Allow rotation around X axis up to 180 degrees
-  }, [])
+    // camera.current.minDistance = 0.1; // Set minimum distance to prevent camera clipping
+    // camera.current.maxZoom = 0;  // Disable zooming to maintain focus on the boat
+    // camera.current.minPolarAngle = 0; // Allow rotation around X axis
+    // camera.current.maxPolarAngle = Math.PI; // Allow rotation around X axis up to 180 degrees
+    if (camera.current) {
+      console.log('camera', camera.current)
+    }
+  }, [camera])
   
 
 
   const { nodes, materials } = useGLTF('/Dredge/boat.glb')
   return (
     <>
-    <CameraControls ref={camera} axis="X" onStart={()=>{setIsChanging(true)}} onEnd={()=>{setIsChanging(false)}}
+    <CameraControls makeDefault ref={camera} axis="X" onStart={()=>{setIsChanging(true)}} onEnd={()=>{setIsChanging(false)}}
     />
-    <group {...props} dispose={null} ref={body} position={[0,-0.08,-2]} scale={0.01}>
+    {/* <CameraHelperComponent camera={perspectiveCamera} /> */}
+    <group {...props} dispose={null} ref={body}>
       <group>
         <group position={[-8.56, -4.17, 0.99]} ref={boatRotation}>
           <group position={[3.13, 3.87, -1.11]} >
             <mesh
               
-              
+              castShadow
               geometry={nodes.pCylinder26_Dark_Grey_0.geometry}
               material={materials.Dark_Grey}
             />
             <mesh
               
-              
+              castShadow
               geometry={nodes.pCylinder26_LT_Gray_0.geometry}
               material={materials.LT_Gray}
             />
             <mesh
               
-              
+              castShadow
               geometry={nodes.pCylinder26_Med_Gray_0.geometry}
               material={materials.Med_Gray}
             />
@@ -138,326 +143,326 @@ export function BoatModel(props) {
           <group position={[-0.1, 0, 0]}>
             <mesh
               
-              
+              castShadow
               geometry={nodes.pCylinder3_Lightbulbs_0.geometry}
               material={materials.Lightbulbs}
             />
             <mesh
               
-              
+              castShadow
               geometry={nodes.pCylinder3_LT_Gray_0.geometry}
               material={materials.LT_Gray}
             />
             <mesh
               
-              
+              castShadow
               geometry={nodes.pCylinder3_Med_Gray_0.geometry}
               material={materials.Med_Gray}
             />
             <mesh
               
-              
+              castShadow
               geometry={nodes.pCylinder3_Wood_Stuff_0.geometry}
               material={materials.Wood_Stuff}
             />
           </group>
           <mesh
             
-            
+            castShadow
             geometry={nodes.Boat_lambert1_0.geometry}
             material={materials.lambert1}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.Boat_Lower_Hull_0.geometry}
             material={materials.Lower_Hull}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.Boat_White_Wood_0.geometry}
             material={materials.White_Wood}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.Boat_Wood_Red_0.geometry}
             material={materials.Wood_Red}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube10_Med_Gray_0001.geometry}
             material={materials.Med_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube11_Med_Gray_0001.geometry}
             material={materials.Med_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube18_Brown_Rope_0001.geometry}
             material={materials.Brown_Rope}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube18_Med_Gray_0001.geometry}
             material={materials.Med_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube20_Brown_Rope_0001.geometry}
             material={materials.Brown_Rope}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube20_Med_Gray_0001.geometry}
             material={materials.Med_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube21_Netting_0001.geometry}
             material={materials.Netting}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder17_Brown_Rope_0001.geometry}
             material={materials.Brown_Rope}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder17_Dark_Grey_0001.geometry}
             material={materials.Dark_Grey}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder17_LT_Gray_0001.geometry}
             material={materials.LT_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder27_Dark_Grey_0001.geometry}
             material={materials.Dark_Grey}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder31_Brown_Rope_0001.geometry}
             material={materials.Brown_Rope}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder31_Dark_Grey_0001.geometry}
             material={materials.Dark_Grey}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder31_LT_Gray_0001.geometry}
             material={materials.LT_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube10_Med_Gray_0.geometry}
             material={materials.Med_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube11_Med_Gray_0.geometry}
             material={materials.Med_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube18_Brown_Rope_0.geometry}
             material={materials.Brown_Rope}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube18_Med_Gray_0.geometry}
             material={materials.Med_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube20_Brown_Rope_0.geometry}
             material={materials.Brown_Rope}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube20_Med_Gray_0.geometry}
             material={materials.Med_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube21_Netting_0.geometry}
             material={materials.Netting}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder17_Brown_Rope_0.geometry}
             material={materials.Brown_Rope}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder17_Dark_Grey_0.geometry}
             material={materials.Dark_Grey}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder17_LT_Gray_0.geometry}
             material={materials.LT_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder27_Dark_Grey_0.geometry}
             material={materials.Dark_Grey}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder31_Brown_Rope_0.geometry}
             material={materials.Brown_Rope}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder31_Dark_Grey_0.geometry}
             material={materials.Dark_Grey}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder31_LT_Gray_0.geometry}
             material={materials.LT_Gray}
           />
           <mesh
-            
+            castShadow
             
             geometry={nodes.pCube12_Lower_Hull_0.geometry}
             material={materials.Lower_Hull}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube14_Dark_Grey_0.geometry}
             material={materials.Dark_Grey}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube2_Brassy_0.geometry}
             material={materials.Brassy}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube2_Dark_Grey_0.geometry}
             material={materials.Dark_Grey}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube2_Decking_0.geometry}
             material={materials.Decking}
           />
           <mesh
-            
+            castShadow
             
             geometry={nodes.pCube2_Glowing_WIndows_0.geometry}
             material={materials.Glowing_WIndows}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube2_lambert1_0.geometry}
             material={materials.lambert1}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube2_LT_Gray_0.geometry}
             material={materials.LT_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube2_Med_Gray_0.geometry}
             material={materials.Med_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube2_Side_Bridge1_0.geometry}
             material={materials.Side_Bridge1}
           />
           <mesh
-            
+            castShadow
             
             geometry={nodes.pCube2_Side_Glow_0.geometry}
             material={materials.Side_Glow}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube2_Wood_Red_0.geometry}
             material={materials.Wood_Red}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube23_Med_Gray_0.geometry}
             material={materials.Med_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube24_Med_Gray_0.geometry}
             material={materials.Med_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube25_Dark_Grey_0.geometry}
             material={materials.Dark_Grey}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube25_LT_Gray_0.geometry}
             material={materials.LT_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube25_Med_Gray_0.geometry}
             material={materials.Med_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube26_Lower_Hull_0.geometry}
             material={materials.Lower_Hull}
             position={[7.32, 4.99, -1.5]}
@@ -465,61 +470,61 @@ export function BoatModel(props) {
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube3_Brassy_0.geometry}
             material={materials.Brassy}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube3_Dark_Grey_0.geometry}
             material={materials.Dark_Grey}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube3_Glowing_WIndows_0.geometry}
             material={materials.Glowing_WIndows}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube3_Med_Gray_0.geometry}
             material={materials.Med_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube3_Wood_Red_0.geometry}
             material={materials.Wood_Red}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube7_LT_Gray_0.geometry}
             material={materials.LT_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube7_Med_Gray_0.geometry}
             material={materials.Med_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube8_Med_Gray_0.geometry}
             material={materials.Med_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube9_Med_Gray_0.geometry}
             material={materials.Med_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder12_Med_Gray_0.geometry}
             material={materials.Med_Gray}
           />
@@ -531,181 +536,181 @@ export function BoatModel(props) {
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder13_LT_Gray_0.geometry}
             material={materials.LT_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder13_Med_Gray_0.geometry}
             material={materials.Med_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder14_Bumpers_0.geometry}
             material={materials.Bumpers}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder14_LT_Gray_0.geometry}
             material={materials.LT_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder14_Med_Gray_0.geometry}
             material={materials.Med_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder15_Glowing_WIndows_0.geometry}
             material={materials.Glowing_WIndows}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder15_Med_Gray_0.geometry}
             material={materials.Med_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder25_Dark_Grey_0.geometry}
             material={materials.Dark_Grey}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder25_LT_Gray_0.geometry}
             material={materials.LT_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder25_Med_Gray_0.geometry}
             material={materials.Med_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder30_Dark_Grey_0.geometry}
             material={materials.Dark_Grey}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder30_LT_Gray_0.geometry}
             material={materials.LT_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder32_Lightbulbs_0.geometry}
             material={materials.Lightbulbs}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder32_LT_Gray_0.geometry}
             material={materials.LT_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder32_Med_Gray_0.geometry}
             material={materials.Med_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder32_Wood_Stuff_0.geometry}
             material={materials.Wood_Stuff}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder40_Glowing_WIndows_0.geometry}
             material={materials.Glowing_WIndows}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder40_Med_Gray_0.geometry}
             material={materials.Med_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder41_Glowing_WIndows_0.geometry}
             material={materials.Glowing_WIndows}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder41_Med_Gray_0.geometry}
             material={materials.Med_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder45_Brown_Rope_0.geometry}
             material={materials.Brown_Rope}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder45_Bumpers_0.geometry}
             material={materials.Bumpers}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder45_Dark_Grey_0.geometry}
             material={materials.Dark_Grey}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder45_LT_Gray_0.geometry}
             material={materials.LT_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder49_Brown_Rope_0.geometry}
             material={materials.Brown_Rope}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder49_Bumpers_0.geometry}
             material={materials.Bumpers}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder49_Dark_Grey_0.geometry}
             material={materials.Dark_Grey}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder49_LT_Gray_0.geometry}
             material={materials.LT_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder47_Brown_Rope_0.geometry}
             material={materials.Brown_Rope}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder47_Bumpers_0.geometry}
             material={materials.Bumpers}
           />
@@ -717,97 +722,97 @@ export function BoatModel(props) {
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder47_LT_Gray_0.geometry}
             material={materials.LT_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder5_Dark_Grey_0.geometry}
             material={materials.Dark_Grey}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder5_LT_Gray_0.geometry}
             material={materials.LT_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder5_Med_Gray_0.geometry}
             material={materials.Med_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder51_Brown_Rope_0.geometry}
             material={materials.Brown_Rope}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder51_Bumpers_0.geometry}
             material={materials.Bumpers}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder51_Dark_Grey_0.geometry}
             material={materials.Dark_Grey}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder51_LT_Gray_0.geometry}
             material={materials.LT_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder52_Dark_Grey_0.geometry}
             material={materials.Dark_Grey}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder52_LT_Gray_0.geometry}
             material={materials.LT_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder6_Dark_Grey_0.geometry}
             material={materials.Dark_Grey}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder6_LT_Gray_0.geometry}
             material={materials.LT_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder6_Med_Gray_0.geometry}
             material={materials.Med_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder9_Dark_Grey_0.geometry}
             material={materials.Dark_Grey}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder9_LT_Gray_0.geometry}
             material={materials.LT_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder9_Med_Gray_0.geometry}
             material={materials.Med_Gray}
           />
@@ -825,61 +830,61 @@ export function BoatModel(props) {
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder22_LT_Gray_0003.geometry}
             material={materials.LT_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder22_Wood_Stuff_0003.geometry}
             material={materials.Wood_Stuff}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder23_Green_Cord_0003.geometry}
             material={materials.Green_Cord}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder23_LT_Gray_0003.geometry}
             material={materials.LT_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder23_Med_Gray_0003.geometry}
             material={materials.Med_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder33_lambert1_0003.geometry}
             material={materials.lambert1}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder34_lambert1_0003.geometry}
             material={materials.lambert1}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder35_lambert1_0003.geometry}
             material={materials.lambert1}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder36_lambert1_0003.geometry}
             material={materials.lambert1}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder37_lambert1_0003.geometry}
             material={materials.lambert1}
           />
@@ -903,103 +908,103 @@ export function BoatModel(props) {
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder22_Wood_Stuff_0002.geometry}
             material={materials.Wood_Stuff}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder23_Green_Cord_0002.geometry}
             material={materials.Green_Cord}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder23_LT_Gray_0002.geometry}
             material={materials.LT_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder23_Med_Gray_0002.geometry}
             material={materials.Med_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder33_lambert1_0002.geometry}
             material={materials.lambert1}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder34_lambert1_0002.geometry}
             material={materials.lambert1}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder35_lambert1_0002.geometry}
             material={materials.lambert1}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder36_lambert1_0002.geometry}
             material={materials.lambert1}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder37_lambert1_0002.geometry}
             material={materials.lambert1}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube13_Green_Cord_0001.geometry}
             material={materials.Green_Cord}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCube22_Green_Cord_0001.geometry}
             material={materials.Green_Cord}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder22_LT_Gray_0001.geometry}
             material={materials.LT_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder22_Wood_Stuff_0001.geometry}
             material={materials.Wood_Stuff}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder23_Green_Cord_0001.geometry}
             material={materials.Green_Cord}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder23_LT_Gray_0001.geometry}
             material={materials.LT_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder23_Med_Gray_0001.geometry}
             material={materials.Med_Gray}
           />
           <mesh
             
-            
+            castShadow
             geometry={nodes.pCylinder33_lambert1_0001.geometry}
             material={materials.lambert1}
           />

@@ -154,7 +154,7 @@ const Chunk = () => {
       <>
       <Detailed distances={[0, 5, 10, 15, 20]}>
         <mesh>
-          <planeGeometry  ref={geometryRef} args={[10, 10,250,250]}/>
+          <planeGeometry  ref={geometryRef} args={[10, 10,200,200]}/>
           <CMS
               baseMaterial={THREE.MeshStandardMaterial}
               vertexShader={terrainVertexShader}

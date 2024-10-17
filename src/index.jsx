@@ -4,6 +4,7 @@ import { Canvas } from '@react-three/fiber'
 import Experience from './Experience.jsx'
 import {useProgress,Html} from '@react-three/drei'
 import { Suspense } from 'react'
+import * as THREE from 'three'
 
 const root = ReactDOM.createRoot(document.querySelector('#root'))
 function Loader() {
@@ -14,13 +15,14 @@ root.render(
     <>
         <Canvas
         camera={ {
-            fov: 45,
-            near: 0.1,
+            fov: 40,
+            near: 0.01,
             far: 250,
-            position: [ -50,20,0 ]
+            position: [ 0,20,0 ],
         } }
         performance={'high-performance'}
-        renderer={{ devicePixelRatio:1 }}
+        gl={{ devicePixelRatio:1, shadowMapType: THREE.BasicShadowMap }}
+        shadows={false}
         >
         <Suspense fallback={<Loader/>}>
             <Experience /> 
