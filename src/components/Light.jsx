@@ -1,7 +1,6 @@
-import { useRef,useEffect } from 'react'
+import { useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
-import  {useHelper, Helper} from '@react-three/drei'
-// import { PointLightHelper } from 'three'
+
 import useGame from '../stores/Game.jsx'
 const Light = () => {
     const light = useRef()

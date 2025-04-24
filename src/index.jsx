@@ -8,7 +8,7 @@ import * as THREE from 'three'
 
 const root = ReactDOM.createRoot(document.querySelector('#root'))
 function Loader() {
-    const { active, progress, errors, item, loaded, total } = useProgress()
+    const { progress } = useProgress()
     return <Html center>{progress} % loaded</Html>
   }
 root.render(
