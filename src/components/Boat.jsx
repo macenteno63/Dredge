@@ -11,7 +11,6 @@ import { useGLTF, useKeyboardControls,CameraControls } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { lerp } from 'three/src/math/MathUtils.js'
-import { CameraHelperComponent } from '../Experience'
 import useGame from '../stores/Game.jsx'
 
 export function BoatModel(props) {
@@ -73,7 +72,6 @@ export function BoatModel(props) {
       body.current.rotation.y -= 1 * delta
     }
     //update boat position
-    // console.log(body.current.position)
     useGame.getState().updateBoatPosition(body.current.position)
 
 
@@ -96,20 +94,6 @@ export function BoatModel(props) {
       true // "true" for smooth animation
     );
   })
-  useEffect(() => {
-    console.log(boatRotation.current.rotation)
-    // camera.current.setLookAt(new THREE.Vecdtor3(0,0,0), new THREE.Vector3(0,0,0))
-    // camera.current.setPosition(new THREE.Vector3(0,1,0))
-    // camera.current.minDistance = 0.1; // Set minimum distance to prevent camera clipping
-    // camera.current.maxZoom = 0;  // Disable zooming to maintain focus on the boat
-    // camera.current.minPolarAngle = 0; // Allow rotation around X axis
-    // camera.current.maxPolarAngle = Math.PI; // Allow rotation around X axis up to 180 degrees
-    if (camera.current) {
-      console.log('camera', camera.current)
-    }
-  }, [camera])
-  
-
 
   const { nodes, materials } = useGLTF('/Dredge/boat.glb')
   return (
